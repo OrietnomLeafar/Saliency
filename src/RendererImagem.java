@@ -180,6 +180,9 @@ public class RendererImagem extends MouseAdapter implements GLEventListener, Key
 			arq = new Arquivo("ax.in", "psi.out");
 			for (int i = 0; i < imgs.length; i++) {
 				nova = (Imagem) imgs[i].clone();
+				Coord p1 = new Coord(0,0);
+				Coord p2 = new Coord(nova.getWidth()-1,nova.getHeight()-1);
+				this.frame = new Janela(p1,p2);
 				convertToGrayScale();
 				PSI();
 			}
@@ -188,13 +191,47 @@ public class RendererImagem extends MouseAdapter implements GLEventListener, Key
 			
 		case KeyEvent.VK_5:
 			choice = 2;
-			salient = (Imagem) nova.clone();
-			simpleSaliency();
+			arq = new Arquivo("ax.in", "psiAndSal.out");
+			for (int i = 0; i < imgs.length; i++) {
+				nova = (Imagem) imgs[i].clone();
+				salient = (Imagem) nova.clone();
+				simpleSaliency();
+							
+				choice = 1;
+				convertToGrayScale();
+				PSI();
+			}
 			
-			arq = new Arquivo("ax.in", "psiBl5.out");
-			choice = 1;
-			convertToGrayScale();
-			PSI();
+			break;
+			
+		case KeyEvent.VK_6:
+			choice = 2;
+			Arquivo arq1 = new Arquivo("psi.out", "arq1.out");
+			Arquivo arq2 = new Arquivo("psiAndSal.out", "arq2.out");
+			Arquivo result = new Arquivo("ax.in", "result.out");
+			double aux1 = 0;
+			double aux2 = 0;
+			int m = 0;
+			int p = 0;
+			int i = 0;
+			
+			while(!arq1.isEndOfFile()){
+				aux1 = arq1.readDouble();
+				aux2 = arq2.readDouble();
+				
+				if(aux2 > aux1){
+					m++;
+				}else if(aux1 > aux2){
+					p++;
+				}else{
+					i++;
+				}
+				
+				
+			}
+			result.println("Melhorou: "+m);
+			result.println("Piorou: "+p);
+			result.println("Igual: "+i);
 			break;
 		
 		case KeyEvent.VK_ESCAPE:	System.exit(0);
@@ -452,8 +489,7 @@ public class RendererImagem extends MouseAdapter implements GLEventListener, Key
 		
 		for (Coord c : toChange) {
 			salient.setPixel(c.x, c.y, 255, 255, 255);
-		}
-		
+		}	
 		
 	}
 
@@ -487,14 +523,25 @@ public class RendererImagem extends MouseAdapter implements GLEventListener, Key
 		if(Yes-8 >=0){
 			Yes -=8;
 		}
-		if(Xdi+8 <= salient.getWidth()){
+		if(Xdi+8 < salient.getWidth()){
 			Xdi +=8;
 		}
-		if(Ydi+8 <=salient.getHeight()){
+		if(Ydi+8 < salient.getHeight()){
 			Ydi +=8;
 		}
-		Coord p1 = new Coord(Xes, Yes);
-		Coord p2 = new Coord(Xdi, Ydi);
+		
+		Coord p1= null;
+		Coord p2 = null;
+
+		if((Xdi-Xes >= (float) (salient.getWidth()*0.85))&& (Ydi-Yes >= (float)(salient.getHeight()*0.85))){
+			p1 = new Coord(0, 0);
+			p2 = new Coord(salient.getWidth()-1, salient.getHeight()-1);
+			System.out.println("NORMAL");
+		}else{
+			p1 = new Coord(Xes, Yes);
+			p2 = new Coord(Xdi, Ydi);
+			System.out.println("JANELA");
+		}
 		
 		this.frame = new Janela(p1, p2);
 
@@ -556,10 +603,6 @@ public class RendererImagem extends MouseAdapter implements GLEventListener, Key
 		varB /= width*height;
 		varY /= width*height;
 		
-		System.out.println(varR);
-		System.out.println(varG);
-		System.out.println(varB);
-		System.out.println(varY);
 
 		if(varR > varG && varR > varB &&varR > varY){
 			System.out.println("Red");

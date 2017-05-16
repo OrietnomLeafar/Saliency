@@ -38,10 +38,10 @@ public class ExemploImagem
 		c.setGreenBits(8);
 		c.setAlphaBits(8); 
 
-		Imagem im[] = new Imagem[12];
+		Imagem im[] = new Imagem[100];
 		// Cria os objetos Imagem a partir de arquivos JPEG
 		for (int i = 0; i < im.length; i++) {
-			im[i] = new Imagem("img"+i+".jpg");
+			im[i] = new Imagem("imagens/img"+i+".jpg");
 		}
 
 

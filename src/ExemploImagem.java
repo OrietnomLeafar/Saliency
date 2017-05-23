@@ -38,15 +38,17 @@ public class ExemploImagem
 		c.setGreenBits(8);
 		c.setAlphaBits(8); 
 
-		Imagem im[] = new Imagem[100];
+		Imagem im[] = new Imagem[90];
+		Imagem imGT[] = new Imagem[90];
 		// Cria os objetos Imagem a partir de arquivos JPEG
-		for (int i = 0; i < im.length; i++) {
-			im[i] = new Imagem("imagens/img"+i+".jpg");
+		for (int i = 12; i < 102; i++) {
+			im[i-12] = new Imagem("imagens/img"+i+".jpg");
+			imGT[i-12] = new Imagem("imagens/imgG"+i+".png");
 		}
 
 
 		// Cria o objeto que irá gerenciar os eventos
-		renderer = new RendererImagem(im);
+		renderer = new RendererImagem(im, imGT);
 
 		// Cria um canvas, adiciona na janela, e especifica o objeto "ouvinte" 
 		// para os eventos Gl, de mouse e teclado

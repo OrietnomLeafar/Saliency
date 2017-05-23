@@ -29,22 +29,23 @@ public class RendererImagem extends MouseAdapter implements GLEventListener, Key
 	private GLUT glut;
 	private GLAutoDrawable glDrawable;
 	private double fAspect;
-	private Imagem imgs[], nova,salient;
+	private Imagem imgs[],imGt[], nova,salient;
 	private int sel;
 
 	private int img[][], gray[][];
 	private LinkedList<Aresta> edges;
 	private int [][]GV;
-	private Arquivo arq;
+	private Arquivo arq, arqC;
 	private boolean temAresta[][];
 	private ArrayList<Double> WPSI;
-	private int choice;
+	private int choice, gtIndex;
 	private Janela frame;
+	private float meanCorr;
 	
 	/**
 	 * Construtor da classe RendererImagem que recebe um array com as imagens
 	 */
-	public RendererImagem(Imagem imgs[])
+	public RendererImagem(Imagem imgs[], Imagem imGT[])
 	{
 		choice  = 0;
 		// Inicializa o valor para corre�ão de aspecto   
@@ -52,6 +53,7 @@ public class RendererImagem extends MouseAdapter implements GLEventListener, Key
 
 		// Imagem carregada do arquivo
 		this.imgs = imgs;
+		this.imGt = imGT;
 		nova = null;
 		sel = 0;	// selecionada = primeira imagem
 	}
@@ -192,15 +194,25 @@ public class RendererImagem extends MouseAdapter implements GLEventListener, Key
 		case KeyEvent.VK_5:
 			choice = 2;
 			arq = new Arquivo("ax.in", "psiAndSal.out");
+			arqC = new Arquivo("ax.in", "corr.out");
+			gtIndex = 0;
+			meanCorr = 0;
+			
 			for (int i = 0; i < imgs.length; i++) {
 				nova = (Imagem) imgs[i].clone();
 				salient = (Imagem) nova.clone();
+				gtIndex = i;
 				simpleSaliency();
 							
 				choice = 1;
 				convertToGrayScale();
 				PSI();
 			}
+			
+			meanCorr = meanCorr/imgs.length;
+			
+			arqC.println();
+			arqC.println("mean: "+meanCorr);
 			
 			break;
 			
@@ -232,6 +244,14 @@ public class RendererImagem extends MouseAdapter implements GLEventListener, Key
 			result.println("Melhorou: "+m);
 			result.println("Piorou: "+p);
 			result.println("Igual: "+i);
+			break;
+			
+		case KeyEvent.VK_7:
+			choice = 2;
+			salient = (Imagem) nova.clone();
+			
+			histogramSaliency();
+			
 			break;
 		
 		case KeyEvent.VK_ESCAPE:	System.exit(0);
@@ -555,6 +575,76 @@ public class RendererImagem extends MouseAdapter implements GLEventListener, Key
 		}
 	}
 	
+	public void histogramSaliency(){
+		int wid = salient.getWidth();
+		int hei = salient.getHeight();
+
+		ArrayList<Cor> cores = new ArrayList<Cor>(); 
+		ArrayList<Float> prob = new ArrayList<Float>();
+		CIELab c = new CIELab();
+		Cor[][] LabColors = new Cor[wid][hei];
+		float[] atualRGB = new float[3];
+		float[] atualLab = new float[3];
+		
+		for (int i = 0; i < wid; i++) {
+			for (int j = 0; j < hei; j++) {
+				atualRGB[0] = salient.getR(i, j);
+				atualRGB[1] = salient.getG(i, j);
+				atualRGB[2] = salient.getB(i, j);
+				
+				atualLab = c.fromRGB(atualRGB);
+				Cor Lab = new Cor(atualLab);
+				int index = existeCor(cores, Lab);
+				
+				if(index > 0){
+					prob.set(index, prob.get(index)+1);
+				}else{
+					cores.add(Lab);
+					prob.add((float) 1.0);
+				
+				}
+				
+				LabColors[i][j] = Lab;			
+			}
+		}			
+		
+		for (int i = 0; i < cores.size(); i++) {
+			float L1 = cores.get(i).L;
+			float a1 = cores.get(i).a;
+			float b1 = cores.get(i).b;
+			float sal = 0;
+			
+			for (int j = 0; j < cores.size(); j++) {
+				float L2 = cores.get(j).L;
+				float a2 = cores.get(j).a;
+				float b2 = cores.get(j).b;
+				
+				if(i != j){
+					float dist = (float) (Math.pow(L2-L1, 2) + Math.pow(a2-a1, 2) +Math.pow(b1-b2, 2));
+					
+					dist = (float) Math.pow(dist, 1/2);
+					
+					sal += dist;
+				}
+			}
+			
+			cores.get(i).sal = sal;
+		}
+		
+	}
+	
+	public int existeCor(ArrayList<Cor> cores, Cor atual){
+		int pos = -1;
+		
+		for (int i = 0; i < cores.size() && pos < 0; i++) {
+			if(cores.get(i).L == atual.L && cores.get(i).a == atual.a && cores.get(i).b == atual.b){
+				pos = i;
+			}
+		}
+		
+		return pos;
+	}
+	
 	public void simpleSaliency(){
 		int width = salient.getWidth();
 		int height = salient.getHeight();
@@ -618,8 +708,28 @@ public class RendererImagem extends MouseAdapter implements GLEventListener, Key
 			saliencyMap(Yc, Iy, width, height);
 		}
 		otsuBinarization(width, height);
+		correlation(width,height);
 		opening(width, height);
 		setWindow(width, height);
+	}
+	
+	public void correlation(int wid, int hei){
+		Imagem atual = imGt[gtIndex];
+		float matches = 0;
+		float corr = 0;
+		
+		for (int i = 0; i < wid; i++) {
+			for (int j = 0; j < hei; j++) {
+				if((salient.getB(i, j) == atual.getB(i, j))){
+					matches ++;
+				}
+			}
+		}
+		
+		corr = matches/(float)(wid*hei);
+		arqC.println(gtIndex+12+":  "+corr);
+		
+		meanCorr += corr;
 	}
 	
 	public void saliencyMap(int [][] ch, float Ic,int wid, int hei){
@@ -1117,6 +1227,19 @@ public class RendererImagem extends MouseAdapter implements GLEventListener, Key
 	}
 
 	
+}
+
+class Cor{
+	float L;
+	float a;
+	float b;
+	float sal;
+	
+	public Cor(float[] lab){
+		this.L = lab[0];
+		this.a = lab[1];
+		this.b = lab[2];
+	}
 }
 
 class Janela{

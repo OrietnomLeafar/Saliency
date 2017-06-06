@@ -38,14 +38,14 @@ public class RendererImagem extends MouseAdapter implements GLEventListener, Key
 	private Arquivo arq, arqC;
 	private boolean temAresta[][];
 	private ArrayList<Double> WPSI;
-	private int choice, gtIndex;
+	private int choice;
 	private Janela frame;
-	private float meanCorr;
+
 	
 	/**
 	 * Construtor da classe RendererImagem que recebe um array com as imagens
 	 */
-	public RendererImagem(Imagem imgs[], Imagem imGT[])
+	public RendererImagem(Imagem imgs[])
 	{
 		choice  = 0;
 		// Inicializa o valor para corre�ão de aspecto   
@@ -53,7 +53,7 @@ public class RendererImagem extends MouseAdapter implements GLEventListener, Key
 
 		// Imagem carregada do arquivo
 		this.imgs = imgs;
-		this.imGt = imGT;
+		
 		nova = null;
 		sel = 0;	// selecionada = primeira imagem
 	}
@@ -194,59 +194,23 @@ public class RendererImagem extends MouseAdapter implements GLEventListener, Key
 		case KeyEvent.VK_5:
 			choice = 2;
 			arq = new Arquivo("ax.in", "psiAndSal.out");
-			arqC = new Arquivo("ax.in", "corr.out");
-			gtIndex = 0;
-			meanCorr = 0;
+
 			
 			for (int i = 0; i < imgs.length; i++) {
 				nova = (Imagem) imgs[i].clone();
 				salient = (Imagem) nova.clone();
-				gtIndex = i;
+
 				simpleSaliency();
 							
 				choice = 1;
 				convertToGrayScale();
 				PSI();
 			}
-			
-			meanCorr = meanCorr/imgs.length;
-			
-			arqC.println();
-			arqC.println("mean: "+meanCorr);
+
 			
 			break;
 			
-		case KeyEvent.VK_6:
-			choice = 2;
-			Arquivo arq1 = new Arquivo("psi.out", "arq1.out");
-			Arquivo arq2 = new Arquivo("psiAndSal.out", "arq2.out");
-			Arquivo result = new Arquivo("ax.in", "result.out");
-			double aux1 = 0;
-			double aux2 = 0;
-			int m = 0;
-			int p = 0;
-			int i = 0;
-			
-			while(!arq1.isEndOfFile()){
-				aux1 = arq1.readDouble();
-				aux2 = arq2.readDouble();
-				
-				if(aux2 > aux1){
-					m++;
-				}else if(aux1 > aux2){
-					p++;
-				}else{
-					i++;
-				}
-				
-				
-			}
-			result.println("Melhorou: "+m);
-			result.println("Piorou: "+p);
-			result.println("Igual: "+i);
-			break;
-			
-		case KeyEvent.VK_7:
+		case KeyEvent.VK_6:			
 			choice = 2;
 			salient = (Imagem) nova.clone();
 			
@@ -708,29 +672,10 @@ public class RendererImagem extends MouseAdapter implements GLEventListener, Key
 			saliencyMap(Yc, Iy, width, height);
 		}
 		otsuBinarization(width, height);
-		correlation(width,height);
 		opening(width, height);
 		setWindow(width, height);
 	}
 	
-	public void correlation(int wid, int hei){
-		Imagem atual = imGt[gtIndex];
-		float matches = 0;
-		float corr = 0;
-		
-		for (int i = 0; i < wid; i++) {
-			for (int j = 0; j < hei; j++) {
-				if((salient.getB(i, j) == atual.getB(i, j))){
-					matches ++;
-				}
-			}
-		}
-		
-		corr = matches/(float)(wid*hei);
-		arqC.println(gtIndex+12+":  "+corr);
-		
-		meanCorr += corr;
-	}
 	
 	public void saliencyMap(int [][] ch, float Ic,int wid, int hei){
 		int[][] s = new int[wid][hei];
